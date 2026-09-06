@@ -122,7 +122,9 @@ echo "===== [6/7] basicsr 兼容补丁 + 权重下载 ====="
 # basicsr 缺失只影响人脸分支（默认关闭），不阻断主流程
 python environment/patch_basicsr.py || echo "[提示] basicsr 未安装，人脸分支（默认关闭）暂不可用，不影响主流程"
 python environment/download_weights.py
-# DiffBIR v2.x 权重不预下载：首次推理时由官方代码自动拉取（后端已注入 hf-mirror）
+# DiffBIR v2.x 权重：torch.hub 直下 HF 裸 URL 会被墙，必须经 hf-mirror 预下载
+# （约 8GB，支持断点续传；失败可单独重跑 bash environment/download_diffbir_weights.sh）
+bash environment/download_diffbir_weights.sh || echo "[警告] DiffBIR 权重下载未完成，请重跑 environment/download_diffbir_weights.sh"
 
 echo "===== [7/7] 收尾 ====="
 pip cache purge 2>/dev/null || true

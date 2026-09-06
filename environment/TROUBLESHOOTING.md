@@ -113,3 +113,16 @@ df -h .
 若冒烟在权重加载处报 `UnpicklingError / weights_only`：这是 torch>=2.4
 默认 `weights_only=True` 所致，在 DiffBIR 的 ckpt 加载点（`torch.load`）
 加 `weights_only=False` 后同样登记到本表并固化进 patch 脚本。
+
+## 14. DiffBIR 权重下载 Connection reset（已根治）
+
+现象：冒烟时 stage1 cleaner（或 SD 底模）下载报
+`urllib.error.URLError: <urlopen error [Errno 104] Connection reset by peer>`。
+原因：DiffBIR 用 `torch.hub.download_url_to_file` 直下 `huggingface.co` 裸 URL，
+**`HF_ENDPOINT` 环境变量对它无效**（只影响 huggingface_hub 库），国内直连被墙。
+处置：`bash environment/download_diffbir_weights.sh`
+（wget -c 走 hf-mirror 预下载 3 个文件到 `third_party/DiffBIR/weights/`，
+DiffBIR 检测到本地文件即跳过网络下载）。清单与体积：
+- `realesrgan_s4_swinir_100k.pth`（stage1 cleaner，~70MB）
+- `sd2.1-base-zsnr-laionaes5.ckpt`（SD2.1 底模，**~5.3GB**）
+- `DiffBIR_v2.1.pt`（ControlNet，~2.5GB）
