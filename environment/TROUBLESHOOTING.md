@@ -86,3 +86,11 @@ df -h .
 ## 10. `Permission denied` / conda init 问题
 
 处置：`source ~/.bashrc`；或直接用绝对路径 `~/miniconda3/envs/camera310/bin/python`。
+
+## 11. 第三方 requirements 把 torch 拽回旧版（已根治）
+
+现象：安装 DiffBIR 依赖时出现 `Collecting torch==2.2.2+cu118 (from xformers...)`。
+原因：其 requirements pin 了 `xformers==0.0.25+cu118`，间接 pin torch 2.2.2+cu118。
+处置：setup_5090.sh 已排除 torch/torchvision/xformers/pytorch-lightning 行，
+并在安装后强制校验 torch 底座（版本 2.7 + sm_120），破坏即自动重装。
+若你在旧版脚本里中断过：`pip cache purge` 清掉已下载的 cu118 轮子（约 2.4GB）再重跑。
