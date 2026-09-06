@@ -1,0 +1,33 @@
+# ===== 数据与产物（大文件/受限数据不入库）=====
+data/
+output_dir/
+weights/
+*.zip
+赛题一/
+__MACOSX/
+
+# ===== 模型权重与运行时产物 =====
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.bin
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+.ipynb_checkpoints/
+
+# ===== IDE / 系统 =====
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ===== 临时文件 =====
+*.log
+tmp/
