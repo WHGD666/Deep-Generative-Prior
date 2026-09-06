@@ -13,6 +13,10 @@ __MACOSX/
 *.safetensors
 *.bin
 
+# ===== 实验运行产物（只入库 manifest 与指标 JSON）=====
+experiments/*/outputs/
+experiments/*/preview/
+
 # ===== Python =====
 __pycache__/
 *.py[cod]

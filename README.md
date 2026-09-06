@@ -131,12 +131,12 @@ my_work.zip
 ```text
 D:\daima\tianchi1\
 ├── 赛题一.zip          # 官方原始压缩包（232MB，macOS 打包）
-└── dataset\            # 修复编码后解压的完整数据（数据不入 Git）
+└── data\               # 修复编码后解压的完整数据（数据不入 Git）
     ├── 验证集\         # case1~5，每张配 _lq.jpg（低质输入）与 _gt.jpg（参考答案）
     └── 测试集\         # case1~case100.jpg
 ```
 
-> ⚠️ 官方 zip 在 Windows 自带解压工具下会因 UTF-8 文件名乱码导致解压失败，须用 Python `zipfile` 转码解压（脚本见 `src/extract_dataset.py`，待补充）。
+> ⚠️ 官方 zip 在 Windows 自带解压工具下会因 UTF-8 文件名乱码导致解压失败，须用 Python `zipfile` 转码解压（脚本见 `src/data_prep/extract_dataset.py`，待编写）。
 
 ### 3.2 实测统计（2026-09-06 核验）
 
@@ -279,27 +279,51 @@ D:\daima\tianchi1\
 
 ```text
 Deep-Generative-Prior/
-├── README.md               # 本文档（方案总纲）
+├── README.md               # 方案总纲（本文档）
 ├── EXP_LOG.md              # 实验日志（追加式，只增不删）
 ├── SUBMISSIONS.md          # 官方提交台账（10 次额度全程追踪）
 ├── .gitignore
-├── docs/                   # 文档与图示资产
-│   └── assets/
-├── src/                    # 源代码（解压/推理/分块/评测/打包）
-├── configs/                # 每次正式实验的配置快照（可复现的唯一定义）
+├── docs/                   # 文档资产
+│   ├── assets/             # 图示（验证集概览拼图等）
+│   ├── competition/        # 赛题原文存档（source of truth，只读）
+│   ├── decisions/          # 技术决策记录 ADR
+│   └── reports/            # 阶段报告（决赛 PPT 素材）
+├── environment/            # 云端 5090 环境定义（命令交用户执行）
+├── src/                    # 源代码（模块划分见 src/README.md）
+│   ├── data_prep/          # 数据解压/指纹/统计核查
+│   ├── preprocess/         # 预处理（去噪/去模糊/分块规划）
+│   ├── enhance/            # 扩散增强核心（DiffBIR/4K分块推理/融合）
+│   ├── postprocess/        # 后处理（低频回填/λ混合/色彩对齐/人脸分支）
+│   ├── evaluate/           # FR/NR 指标与综合分评测
+│   ├── submit/             # 提交包校验与打包
+│   └── utils/              # 通用工具（IO/日志/种子）
+├── configs/                # 配置中心
+│   ├── defaults/           # 管线各层默认参数
+│   └── experiments/        # 实验配置快照（文件名 = run_id）
+├── scripts/                # 远程 5090 运行入口脚本
 ├── experiments/            # 正式 run 记录（manifest + 指标 JSON）
-├── submissions/            # 提交包清单与分数记录（不含 zip 本体）
+├── submissions/            # 提交快照（清单 + 本地分数）
+├── tests/                  # 测试（代码审计配套）
 ├── data/                   # 【不入库】数据集
-├── output_dir/             # 【不入库】提交产物图片
-└── weights/                # 【不入库】模型权重
+├── weights/                # 【不入库】模型权重
+└── output_dir/             # 【不入库】提交产物图片
 ```
 
-### 7.2 Git 纪律
+各目录的详细职责与约定见该目录下的 `README.md`。
+
+### 7.2 Git 纪律与协作分工（2026-09-06 约定）
 
 - 分支：`main` 保持可复现稳定态；实验在 `exp/<run主题>` 分支进行，结论合回 main。
 - 提交按**里程碑**进行（跑通管线 / baseline 建立 / 每个候选家族 / 提交包冻结），不按时间随手提交；前缀 `feat:/fix:/docs:/exp:`。
 - 数据集、权重、提交 zip、缓存一律不入库；配置与指标 JSON 必须入库（可复现的最小闭环）。
 - 远程：`origin = https://github.com/WHGD666/Deep-Generative-Prior.git`，里程碑推送。
+
+**协作分工四原则**：
+
+1. **命令分工**：环境安装、模型下载等大任务由 AI 提供完整命令，**用户本人执行**；AI 不代跑大任务。
+2. **本地先行**：一切代码/文档先在本地项目内创建写好，再谈提交上传。
+3. **上传纪律**：只上传关键代码、总结文档与**已验证**的内容；数据、权重、产物、临时文件杜绝入库。
+4. **强制审计**：每次里程碑提交前做代码审计（staged diff 逐项审查 + 测试 + 检查清单核对），宁多耗 token 不出错。
 
 ### 7.3 实验记录规范（run manifest）
 
