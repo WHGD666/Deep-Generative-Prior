@@ -17,4 +17,6 @@
 
 ## 当前状态
 
-骨架阶段。下一里程碑（9/7）：完成 `setup_5090.sh` 与 requirements 清单。
+已实现：`setup_5090.sh`（幂等一键安装）/ `requirements.txt` / `download_weights.py` /
+`patch_basicsr.py`（basicsr×新torchvision 兼容补丁）/ `TROUBLESHOOTING.md`（10 类已知故障）/
+`nvidia_smi_check.md`。**执行由用户本人按 README 指引分步进行。**

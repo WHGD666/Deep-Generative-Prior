@@ -15,4 +15,6 @@
 ## 约定
 
 - 修复缺陷必须连同回归测试一起提交（同 milestone commit）
-- 测试在云端或本地均可跑，不依赖 GPU
+- CPU 测试不依赖 GPU；远程全量跑：`pytest tests/ -v -m "not remote"`，
+  集成冒烟：`pytest tests/test_smoke_diffbir.py -v -m remote`
+- 本机无 pytest 时可用最小运行器：`python tests/run_all.py`

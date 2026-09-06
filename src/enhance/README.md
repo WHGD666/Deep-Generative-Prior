@@ -19,4 +19,6 @@
 
 ## 当前状态
 
-骨架阶段。首任务：DiffBIR 在 val case1 的 512 小图上跑通。
+已实现：`tiled_inference.py`（分块引擎+倍率探测）/ `blend.py` / `backends/`（DiffBIR、ResShift CLI 驱动）；
+入口 `src/run_pipeline.py`（预处理→分块→后处理→一致性核查→写出）。
+第三方集成采用 CLI 子进程 + 自动探测倍率设计（ADR-002）；集成正确性由远程冒烟测试把关。

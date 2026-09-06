@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# RTX 5090 一键环境搭建（远程 Linux 执行，幂等：失败后可重跑续接）
+# ============================================================
+# 前置：驱动须支持 CUDA 12.8（Blackwell sm_120）——见 nvidia_smi_check.md
+# 用法：bash environment/setup_5090.sh
+# 可选环境变量：
+#   ENV_NAME=camera310        conda 环境名
+#   SKIP_RESSHIFT=1           跳过保底后端 ResShift 的克隆
+#   USE_CN_MIRROR=1           使用国内镜像（pip 阿里源 + HF hf-mirror）
+# ============================================================
+set -euo pipefail
+cd "$(dirname "$0")/.."
+ROOT=$(pwd)
+ENV_NAME=${ENV_NAME:-camera310}
+
+echo "===== [0/7] 前置检查 ====="
+nvidia-smi || { echo "[致命] nvidia-smi 不可用"; exit 1; }
+
+if [[ "${USE_CN_MIRROR:-0}" == "1" ]]; then
+  export PIP_INDEX_URL="https://mirrors.aliyun.com/pypi/simple/"
+  export HF_ENDPOINT="https://hf-mirror.com"
+  echo "[镜像] pip=阿里云, HF=hf-mirror"
+fi
+
+echo "===== [1/7] Python 3.10 环境 ====="
+if conda env list 2>/dev/null | grep -q "^${ENV_NAME} "; then
+  echo "[跳过] conda 环境已存在"
+else
+  if command -v conda >/dev/null 2>&1; then
+    conda create -y -n "$ENV_NAME" python=3.10
+  else
+    echo "[信息] 无 conda，改用系统 python3.10 venv"
+    python3.10 -m venv .venv
+  fi
+fi
+if command -v conda >/dev/null 2>&1 && conda env list | grep -q "^${ENV_NAME} "; then
+  # shellcheck disable=SC1091
+  source "$(conda info --base)/etc/profile.d/conda.sh" && conda activate "$ENV_NAME"
+else
+  source .venv/bin/activate
+fi
+python -c 'import sys; assert sys.version_info[:2] == (3, 10), sys.version'
+
+echo "===== [2/7] PyTorch (cu128, Blackwell sm_120) ====="
+if python -c "import torch" 2>/dev/null && python -c "
+import torch
+assert torch.cuda.is_available()
+cap = torch.cuda.get_device_capability(0)
+assert cap >= (12, 0), f'当前 torch 不支持 {cap}，需重装 cu128 版'
+print('torch', torch.__version__, 'sm', cap)
+"; then
+  echo "[跳过] torch 已就绪"
+else
+  pip install --no-cache-dir torch==2.7.1 torchvision==0.22.1 \
+    --index-url https://download.pytorch.org/whl/cu128
+fi
+python -c "
+import torch
+assert torch.cuda.is_available(), 'CUDA 不可用'
+print('[确认] torch', torch.__version__, '| 设备:', torch.cuda.get_device_name(0),
+      '| sm:', torch.cuda.get_device_capability(0))
+"
+
+echo "===== [3/7] 本项目依赖 ====="
+pip install -r environment/requirements.txt
+
+echo "===== [4/7] 克隆第三方仓库 ====="
+mkdir -p third_party
+if [[ ! -d third_party/DiffBIR ]]; then
+  git clone https://github.com/XPixelGroup/DiffBIR.git third_party/DiffBIR
+fi
+if [[ "${SKIP_RESSHIFT:-0}" != "1" && ! -d third_party/ResShift ]]; then
+  git clone https://github.com/zsyOAOA/ResShift.git third_party/ResShift || \
+    echo "[警告] ResShift 克隆失败（保底后端，可稍后手动补）"
+fi
+: > third_party_commits.txt
+for d in third_party/*/; do
+  n=$(basename "$d")
+  c=$(git -C "$d" rev-parse HEAD 2>/dev/null || true)
+  [[ -n "$c" ]] && echo "$n $c" >> third_party_commits.txt
+done
+cat third_party_commits.txt
+
+echo "===== [5/7] DiffBIR 依赖（剔除 torch 相关行，避免覆盖 cu128 版） ====="
+grep -Eiv "^(torch|torchvision|torchaudio|pytorch-lightning==1\.[0-4])" \
+  third_party/DiffBIR/requirements.txt > /tmp/diffbir_reqs.txt || true
+pip install -r /tmp/diffbir_reqs.txt || {
+  echo "[回退] requirements 安装失败，改用核心依赖清单"
+  pip install pytorch-lightning einops omegaconf transformers open-clip-torch \
+              kornia timm facexlib gfpgan scipy gradio
+}
+pip install "pytorch-lightning>=1.9,<2.0" || echo "[警告] PL 版本待排错（见 TROUBLESHOOTING.md #4）"
+
+echo "===== [6/7] basicsr 兼容补丁 + 权重下载 ====="
+python environment/patch_basicsr.py
+python environment/download_weights.py
+if ls weights/diffbir/*.ckpt >/dev/null 2>&1; then
+  mkdir -p third_party/DiffBIR/weights
+  ln -sfn "$ROOT"/weights/diffbir/*.ckpt third_party/DiffBIR/weights/ || \
+    cp weights/diffbir/*.ckpt third_party/DiffBIR/weights/
+else
+  echo "[警告] weights/diffbir 下无 ckpt（下载失败？）——冒烟测试前请先按 weights_download.md 补齐"
+fi
+
+echo "===== [7/7] 收尾 ====="
+pip cache purge 2>/dev/null || true
+df -h . | tail -1
+echo "============================================================"
+echo "环境搭建完成。下一步："
+echo "  1) bash scripts/prepare_data.sh"
+echo "  2) pytest tests/ -v -m 'not remote'   # 本地逻辑自检（无需 GPU）"
+echo "  3) pytest tests/test_smoke_diffbir.py -v -m remote   # DiffBIR 集成冒烟"
+echo "============================================================"

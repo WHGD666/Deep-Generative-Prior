@@ -1,0 +1,10 @@
+# 本项目自身依赖（远程 5090，Python 3.10；torch 由 setup_5090.sh 单独装 cu128 版）
+# 注意：DiffBIR/ResShift 的依赖在 setup_5090.sh 中从其仓库 requirements 安装，不在此处。
+
+numpy
+pillow>=10
+pyyaml
+tqdm
+pytest
+huggingface_hub
+pyiqa          # LPIPS/DISTS/MUSIQ/CLIPIQA/NIQE/MANIQA（会带 timm 等依赖）

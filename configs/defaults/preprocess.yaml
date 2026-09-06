@@ -1,0 +1,13 @@
+# 预处理默认配置
+# 原则：只做"净化"，不做生成；所有强度进配置，一次实验一份快照。
+
+denoise:
+  enabled: true
+  gaussian_sigma: 0.6   # 轻度高斯；注意与后端 ×4 预缩放的平滑效果叠加，宁轻勿重
+  median_size: 0        # 0=关闭；对椒盐噪点可设 3
+
+deblur:
+  enabled: false        # 实验性 USM 锐化，待 baseline 后评估
+  usm_radius: 2.0
+  usm_percent: 60
+  usm_threshold: 2

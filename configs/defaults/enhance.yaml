@@ -1,0 +1,28 @@
+# 扩散增强核心配置（RTX 5090 基准）
+# 后端为 CLI 子进程驱动（ADR-002），放大倍率运行时自动探测（infer_upscale）。
+
+backend:
+  name: diffbir
+  diffbir:
+    repo_dir: third_party/DiffBIR
+    version: general        # general | face
+    steps: 50               # DDIM 采样步数；调试可降到 25，正式建议 50
+    cfg_scale: 4.0          # 生成引导强度；越高越"生成"，过高易幻觉
+    device: cuda:0
+    extra_args: []          # 应急通道：透传给官方 CLI 的额外参数
+
+  resshift:                 # 保底后端（切换 backend.name=resshift 启用）
+    repo_dir: third_party/ResShift
+    config: third_party/ResShift/configs/sample_resshift_x4.yaml
+    ckpt: weights/resshift/resshift_x4.pth
+    device: cuda:0
+    extra_args: []
+
+# 分块（tile_size 是"后端输入空间"的块尺寸；×4 后端下输出块为 4 倍）
+tile_size: 512
+overlap: 64                # 输入空间重叠；输出空间 ×4=256 像素羽化，接缝平滑
+
+# 预缩放：auto = 跟随后端探测倍率（×4 底座 => 4K 先降 1/4 再增强回原尺寸）
+prescale: auto
+
+seed: 0                    # 全局随机种子（可复现）

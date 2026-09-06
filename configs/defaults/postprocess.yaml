@@ -1,0 +1,26 @@
+# 后处理默认配置（提分关键层；全部可独立开关）
+# 顺序固定：color_align -> lowfreq_backfill -> lambda_blend -> face_branch
+
+color_align:
+  enabled: true
+  mode: mean_std
+  strength: 1.0            # 1=完全对齐输入的逐通道均值/方差
+
+lowfreq_backfill:
+  enabled: true
+  sigma: 16.0              # 低频截止（像素）；16 大致锁定色彩/亮度，不动纹理
+  strength: 1.0
+
+lambda_blend:
+  enabled: true
+  lambda: 0.7              # 1=纯生成端, 0=纯保真端；val 扫描 {0.3,0.5,0.7,0.9} 后定值
+  fidelity_source: preprocessed
+
+face_branch:
+  enabled: false           # 默认关闭；处理含人脸图时单独开（需要 GFPGAN 权重）
+  model_path: weights/gfpgan/GFPGANv1.4.pth
+  upscale: 1
+
+consistency_check:
+  max_color_drift: 0.06    # 输出-输入逐通道均值漂移上限（0~1 域）
+  min_corr: 0.80           # 结构相关性下限（防内容改写）

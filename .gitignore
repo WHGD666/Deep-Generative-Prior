@@ -2,6 +2,7 @@
 data/
 output_dir/
 weights/
+third_party/
 *.zip
 赛题一/
 __MACOSX/
@@ -35,3 +36,7 @@ Thumbs.db
 # ===== 临时文件 =====
 *.log
 tmp/
+
+# ===== 本机工具状态（不入库）=====
+.mimosa/
+.video_agent/

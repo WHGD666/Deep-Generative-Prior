@@ -1,0 +1,49 @@
+# 评测配置
+# ⚠️ 权重与折算均为本地启发式（见 src/evaluate/composite.py），
+#    官方公式公布（决赛入围名单时）后立即切换官方口径。
+
+fr_metrics:      # 需要 GT（val 模式）；psnr/ssim/ms_ssim 自实现，其余 pyiqa
+  - psnr
+  - ssim
+  - ms_ssim
+  - lpips
+  - dists
+
+nr_metrics:      # val/test 通用（pyiqa）；niqe 为低好，其余高好
+  - musiq
+  - clipiqa
+  - niqe
+  - maniqa
+
+# 多套候选权重（应对官方权重未知：观察配置在不同假设下的稳健性）
+metric_sets:
+  equal:
+    psnr: 1.0
+    ssim: 1.0
+    ms_ssim: 1.0
+    lpips: 1.0
+    dists: 1.0
+    musiq: 1.0
+    clipiqa: 1.0
+    niqe: 1.0
+    maniqa: 1.0
+  fr_heavy:
+    psnr: 2.0
+    ssim: 2.0
+    ms_ssim: 1.5
+    lpips: 2.0
+    dists: 1.5
+    musiq: 0.5
+    clipiqa: 0.5
+    niqe: 0.5
+    maniqa: 0.5
+  nr_heavy:
+    psnr: 0.5
+    ssim: 0.5
+    ms_ssim: 0.5
+    lpips: 1.0
+    dists: 1.0
+    musiq: 2.0
+    clipiqa: 2.0
+    niqe: 1.5
+    maniqa: 2.0
