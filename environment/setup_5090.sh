@@ -83,6 +83,7 @@ for d in third_party/*/; do
   [[ -n "$c" ]] && echo "$n $c" >> third_party_commits.txt
 done
 cat third_party_commits.txt
+python environment/patch_diffbir.py || true   # 修上游 torch.Tuple 笔误（ADR-003 期间实测）
 
 echo "===== [5/7] DiffBIR 依赖（剔除 torch/xformers/PL，防止拖垮 cu128 底座） ====="
 # xformers==0.0.25+cu118 会把 torch 拽回 2.2.2+cu118（不支持 Blackwell），必须排除；

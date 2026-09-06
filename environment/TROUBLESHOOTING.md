@@ -102,3 +102,14 @@ df -h .
 处置：`pip install "opencv-python-headless==4.9.0.80"`（setup 已自动处理）。
 另：transformers 保持 DiffBIR 的 4.37.2（pyiqa 想要 5.0 只是版本声明冲突，
 我们用的 musiq/clipiqa/niqe/maniqa/lpips/dists 指标均不 import transformers）。
+
+## 13. DiffBIR 上游代码补丁台账
+
+| 补丁 | 现象 | 固化位置 |
+|---|---|---|
+| `torch.Tuple/List/Dict/Set` → 内置泛型 | 冒烟时 `AttributeError: module 'torch' has no attribute 'Tuple'`（edm_sampler.py:145 等） | `environment/patch_diffbir.py`（setup 第 4 步自动执行） |
+| torchsde 缺失 | `ModuleNotFoundError: No module named 'torchsde'`（setup grep 误过滤所致，已收紧正则 + 补入 requirements） | `environment/requirements.txt` |
+
+若冒烟在权重加载处报 `UnpicklingError / weights_only`：这是 torch>=2.4
+默认 `weights_only=True` 所致，在 DiffBIR 的 ckpt 加载点（`torch.load`）
+加 `weights_only=False` 后同样登记到本表并固化进 patch 脚本。
