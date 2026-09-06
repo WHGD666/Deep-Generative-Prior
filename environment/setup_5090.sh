@@ -23,6 +23,9 @@ if [[ "${USE_CN_MIRROR:-0}" == "1" ]]; then
 fi
 
 echo "===== [1/7] Python 3.10 环境 ====="
+# 新版 conda 创建环境前需接受频道 ToS（老版本无 tos 子命令，静默忽略）
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main >/dev/null 2>&1 || true
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r >/dev/null 2>&1 || true
 if conda env list 2>/dev/null | grep -q "^${ENV_NAME} "; then
   echo "[跳过] conda 环境已存在"
 else

@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import zipfile
 from pathlib import Path
 
@@ -50,15 +51,23 @@ def extract(zip_path: Path, out_root: Path) -> dict[str, int]:
             if not name.lower().endswith(".jpg"):
                 continue
             parts = Path(name).parts  # 形如 (赛题一, 验证集, case1_lq.jpg)
-            if len(parts) != 3:
-                raise RuntimeError(f"zip 内出现意外的目录层级: {name}")
+            if len(parts) != 3 or Path(name).is_absolute():
+                raise RuntimeError(f"zip 内存在非法路径条目，已拒绝: {name!r}")
             sub = DIR_MAP.get(parts[1])
             if sub is None:
                 raise RuntimeError(f"zip 内出现未知的子目录: {parts[1]} (来自 {name})")
-            target = out_root / sub / parts[2]
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with z.open(info) as src, open(target, "wb") as dst:
-                dst.write(src.read())
+            # Zip Slip 防线（白名单）：文件名必须严格匹配赛题命名规则，
+            # 不合规则整条拒绝；落盘用 stdlib extract（自带路径净化）。
+            m = re.fullmatch(r"case(\d+)(_(lq|gt))?\.jpg", parts[2])
+            if not m:
+                raise RuntimeError(f"zip 内出现意外文件名，已拒绝: {parts[2]!r}")
+            tag = m.group(3)
+            if sub == "val" and tag is None:
+                raise RuntimeError(f"val 目录下缺少 _lq/_gt 标记: {parts[2]!r}")
+            if sub == "test" and tag is not None:
+                raise RuntimeError(f"test 目录下不允许 _lq/_gt 标记: {parts[2]!r}")
+            (out_root / sub).mkdir(parents=True, exist_ok=True)
+            z.extract(info, path=str(out_root / sub))
             counts[sub] += 1
     return counts
 
