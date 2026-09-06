@@ -2,7 +2,8 @@
 
 运行：pytest tests/test_smoke_diffbir.py -v -m remote
 跳过条件：第三方仓库缺失（本地开发机自动 skip）。
-注意：首次运行会自动下载 v2.x 权重（经 hf-mirror，约 1~2GB），耗时长属正常。
+注意：权重需先经 environment/download_diffbir_weights.sh 预下载（约 6.3GB），
+未就位时会在 cleaner 加载处报连接错误（排障 #14）。
 
 验证点：
 1. DiffBIR 新版 CLI（inference.py）可启动并完成一张探测块的推理；

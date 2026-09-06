@@ -126,3 +126,14 @@ DiffBIR 检测到本地文件即跳过网络下载）。清单与体积：
 - `realesrgan_s4_swinir_100k.pth`（stage1 cleaner，~70MB）
 - `sd2.1-base-zsnr-laionaes5.ckpt`（SD2.1 底模，**~5.3GB**）
 - `DiffBIR_v2.1.pt`（ControlNet，~2.5GB）
+
+## 15. 512 瓦片 VAE 编码 CUDA OOM（16GiB 分配失败，已根治）
+
+现象：管线处理真实瓦片时 `vae.py mid.attn_1 → F.scaled_dot_product_attention`
+尝试分配 16GiB 显存失败（31.4GiB 卡已用 27.6GiB）。冒烟小图不触发，真图必炸。
+原因：v2.1 的 `--upscale 4` 语义是**先把输入双三次放大 4 倍再修复**——
+512px 瓦片被内部撑到 2048×2048，VAE 中间层注意力矩阵 256² tokens 平方级爆炸。
+处置：`enhance.yaml` 后端 `upscale: 4 → 1`（同分辨率修复本就不需要放大），
+4K 原图直接按 512+64 重叠分块喂入；`prescale: auto` 探测 k=1 自然不缩放。
+附带收益：每图瓦片数 ~190 → ~70，速度约快 3 倍且不丢原始细节。
+另在 `_run_cli` 注入 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` 防碎片。

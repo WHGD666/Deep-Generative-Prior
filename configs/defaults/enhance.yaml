@@ -6,9 +6,10 @@ backend:
   name: diffbir
   diffbir:
     repo_dir: third_party/DiffBIR
-    task: sr            # sr（×4 超分底座，配 1/4 预缩放）| denoise | faceSR
-    version: v2.1       # 官方推荐版本（效果最好）；权重首次推理时自动下载
-    upscale: 4          # 显式传给 CLI，与运行时探测互相印证
+    task: sr            # 同分辨率盲修复（v2.1 底座；tile 直喂 4K 原分辨率）
+    version: v2.1       # 官方推荐版本（效果最好）；权重经 environment/download_diffbir_weights.sh 预下载
+    upscale: 1          # v2.1 语义=先把输入双三次放大 N 倍再修复；赛题为同分辨率修复，
+                        # 且 ×4 会把 512 瓦片撑到 2048 再过 VAE 直接 OOM（排障 #15），固定 1
     steps: 50           # 采样步数；调试可降到 25
     cfg_scale: 8        # 生成引导强度
     captioner: none     # 不加载 LLaVA 说明模型（省显存省时间）
@@ -26,11 +27,11 @@ backend:
     device: cuda:0
     extra_args: []
 
-# 分块（tile_size 是"后端输入空间"的块尺寸；×4 后端下输出块为 4 倍）
-tile_size: 512
-overlap: 64                # 输入空间重叠；输出空间 ×4=256 像素羽化，接缝平滑
+# 分块（tile_size = 后端输入尺寸 = 输出尺寸，同分辨率修复无放大）
+tile_size: 512             # v2.1 原生工作分辨率，勿随意上调
+overlap: 64                # 重叠像素羽化，接缝平滑
 
-# 预缩放：auto = 跟随后端探测倍率（×4 底座 => 4K 先降 1/4 再增强回原尺寸）
+# 预缩放：auto = 跟随后端探测倍率。upscale=1 时探测 k=1 => 不缩放（4K 直接分块）
 prescale: auto
 
 seed: 0                    # 全局随机种子（可复现）

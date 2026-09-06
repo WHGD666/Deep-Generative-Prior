@@ -28,6 +28,9 @@ def _run_cli(cmd: list[str], cwd: Path, device: str | None, tag: str,
         env["CUDA_VISIBLE_DEVICES"] = device.split(":", 1)[-1]
     if hf_mirror and not env.get("HF_ENDPOINT"):
         env["HF_ENDPOINT"] = "https://hf-mirror.com"  # 国内拉 HF 权重/模型卡
+    if not env.get("PYTORCH_CUDA_ALLOC_CONF"):
+        # 减少长时间多瓦片推理的显存碎片（OOM 排障 #15）
+        env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     proc = subprocess.run(
         cmd, cwd=str(cwd), env=env, capture_output=True, text=True
     )
@@ -68,9 +71,10 @@ class DiffBIRBackend:
 
     配置（configs/defaults/enhance.yaml -> backends.diffbir）：
         repo_dir: third_party/DiffBIR
-        task: sr                # sr（×4 超分，配我们的 1/4 预缩放）| denoise | faceSR
+        task: sr                # 同分辨率盲修复（赛题语义）
         version: v2.1           # v2.1（推荐，效果最好）| v2 | v1_general ...
-        upscale: 4              # 显式传给 CLI，与探测机制互相印证
+        upscale: 1              # v2.1 会先把输入放大 N 倍再修复；同分辨率修复固定 1，
+                                # ×4 会把 512 瓦片撑到 2048 过 VAE 直接 OOM
         steps: 50
         cfg_scale: 8
         captioner: none         # 不加载 LLaVA 说明模型
