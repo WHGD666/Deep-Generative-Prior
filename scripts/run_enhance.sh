@@ -7,6 +7,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# 统一网络口径：子进程内任何 huggingface_hub 下载都走 hf-mirror（排障 #14/#18）
+export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
+
 RUN_ID=${1:?缺少 RUN_ID}
 INPUT_DIR=${2:?缺少 INPUT_DIR}
 PATTERN=${3:?缺少 INPUT_PATTERN，如 "{case}.jpg"}

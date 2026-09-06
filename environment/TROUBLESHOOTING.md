@@ -163,3 +163,13 @@ pyiqa 检测到本地文件即跳过下载。幂等 + wget -c 断点续传。
 另：clipiqa 首次运行还会从 openaipublic.azureedge.net 下载 CLIP RN50
 （约 254MB，Azure CDN 国内一般可达）；若被 reset，手动放置到
 `~/.cache/clip/RN50.pt`。
+
+## 18. MANIQA 骨干模型下载失败（timm → hf_hub，已根治）
+
+现象：`create_metric("maniqa")` 时 timm 下载
+`timm/vit_base_patch8_224.augreg2_in21k_ft_in1k` 反复 Connection reset。
+原因：timm 经 **huggingface_hub** 下载骨干模型，此路径支持 HF_ENDPOINT，
+但 run_eval 进程本身没有设置该变量（此前只给 DiffBIR 子进程注入）。
+处置：`scripts/run_eval.sh` / `run_enhance.sh` 顶部统一
+`export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"`——
+用户显式设置时尊重原值，未设置时默认走镜像。

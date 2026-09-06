@@ -6,6 +6,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# timm（MANIQA 骨干）等经 huggingface_hub 下载：默认端点国内被墙，默认 hf-mirror（排障 #18）
+export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
+
 RUN_ID=${1:?缺少 RUN_ID}
 OUTPUT_DIR=${2:?缺少 OUTPUT_DIR}
 GT_DIR=${3:-none}
