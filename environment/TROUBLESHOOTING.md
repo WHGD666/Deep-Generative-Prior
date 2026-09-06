@@ -39,26 +39,26 @@ PL 旧符号，做最小替换（如 `pytorch_lightning.utilities.distributed` -
 
 ## 5. DiffBIR CLI 参数名对不上（`unrecognized arguments`）
 
-原因：官方 CLI 参数可能随版本演进。
+原因：我们集成的是 v2.x 重写版（入口 `inference.py`）；官方参数可能继续演进。
 处置：
 ```bash
-python third_party/DiffBIR/inference_bsr.py --help
+python third_party/DiffBIR/inference.py --help
 ```
 把实际参数名映射进 `configs/defaults/enhance.yaml -> backends.diffbir`
 （支持 `extra_args` 透传），必要时改 `src/enhance/backends/__init__.py` 的
 `DiffBIRBackend.enhance_batch`，改动记 EXP_LOG。
+典型差异：`--steps` 若不被识别，把配置里 `steps: 50` 改为 `steps: 0` 即可去掉该参数。
 
-## 6. DiffBIR 找不到权重文件
+## 6. DiffBIR 权重自动下载失败
 
-现象：CLI 报 ckpt 路径不存在。
-原因：DiffBIR 约定权重在其仓库内 `weights/` 下。
-处置：确认 setup 第 6 步的软链已建立：
+现象：首次推理时报 HF 下载错误（404/连接超时）。
+处置：
 ```bash
-ls -l third_party/DiffBIR/weights/
-# 若为空：
-ln -sfn ~/Deep-Generative-Prior/weights/diffbir/*.ckpt third_party/DiffBIR/weights/
+export HF_ENDPOINT=https://hf-mirror.com     # 我们的子进程默认已注入，可显式覆盖
+df -h /data                                   # 确认磁盘够（v2.1.pt 约 1~2GB）
 ```
-仍失败则读其 `inference_bsr.py` 顶部的路径常量，用 `extra_args` 显式传参。
+仍失败则按 weights_download.md 手动下载后，用 `extra_args` 把权重路径传给
+官方 CLI（具体参数名以 `inference.py --help` 输出为准）。
 
 ## 7. 显存 OOM
 

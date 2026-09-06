@@ -1,15 +1,21 @@
 # 扩散增强核心配置（RTX 5090 基准）
 # 后端为 CLI 子进程驱动（ADR-002），放大倍率运行时自动探测（infer_upscale）。
+# DiffBIR 使用 2024-04 重写后的 v2.x 代码库（入口 inference.py，ADR-003）。
 
 backend:
   name: diffbir
   diffbir:
     repo_dir: third_party/DiffBIR
-    version: general        # general | face
-    steps: 50               # DDIM 采样步数；调试可降到 25，正式建议 50
-    cfg_scale: 4.0          # 生成引导强度；越高越"生成"，过高易幻觉
+    task: sr            # sr（×4 超分底座，配 1/4 预缩放）| denoise | faceSR
+    version: v2.1       # 官方推荐版本（效果最好）；权重首次推理时自动下载
+    upscale: 4          # 显式传给 CLI，与运行时探测互相印证
+    steps: 50           # 采样步数；调试可降到 25
+    cfg_scale: 8        # 生成引导强度
+    captioner: none     # 不加载 LLaVA 说明模型（省显存省时间）
+    noise_aug: 0
     device: cuda:0
-    extra_args: []          # 应急通道：透传给官方 CLI 的额外参数
+    hf_mirror: true     # 子进程注入 HF_ENDPOINT=hf-mirror（国内自动下载权重）
+    extra_args: []      # 应急通道：透传给官方 CLI 的额外参数
 
   resshift:                 # 保底后端（切换 backend.name=resshift 启用）
     repo_dir: third_party/ResShift

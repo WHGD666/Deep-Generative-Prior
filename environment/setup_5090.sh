@@ -120,13 +120,7 @@ echo "===== [6/7] basicsr 兼容补丁 + 权重下载 ====="
 # basicsr 缺失只影响人脸分支（默认关闭），不阻断主流程
 python environment/patch_basicsr.py || echo "[提示] basicsr 未安装，人脸分支（默认关闭）暂不可用，不影响主流程"
 python environment/download_weights.py
-if ls weights/diffbir/*.ckpt >/dev/null 2>&1; then
-  mkdir -p third_party/DiffBIR/weights
-  ln -sfn "$ROOT"/weights/diffbir/*.ckpt third_party/DiffBIR/weights/ || \
-    cp weights/diffbir/*.ckpt third_party/DiffBIR/weights/
-else
-  echo "[警告] weights/diffbir 下无 ckpt（下载失败？）——冒烟测试前请先按 weights_download.md 补齐"
-fi
+# DiffBIR v2.x 权重不预下载：首次推理时由官方代码自动拉取（后端已注入 hf-mirror）
 
 echo "===== [7/7] 收尾 ====="
 pip cache purge 2>/dev/null || true
