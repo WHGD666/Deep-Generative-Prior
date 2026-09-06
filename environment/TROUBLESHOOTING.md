@@ -149,3 +149,17 @@ DiffBIR 检测到本地文件即跳过网络下载）。清单与体积：
 处置：`bash environment/download_iqa_weights.sh` —— 从已安装的 pyiqa
 包源码收集全部 HF 裸链，经 hf-mirror 预下到 `~/.cache/torch/hub/pyiqa/`，
 pyiqa 检测到本地文件即跳过下载。幂等 + wget -c 断点续传。
+注意 v2 版改为 hf-mirror API 枚举 `chaofengc/IQA-PyTorch-Weights` 仓库
+清单（v1 的 grep 会误抓文档链接）；扩展名白名单必须含 `.mat`
+（niqe 的 `niqe_modelparameters.mat` 曾被漏掉）。
+
+## 17. clipiqa 加载报 No module named 'pkg_resources'（已根治）
+
+现象：`create_metric("clipiqa")` 时 `clip/clip.py` 里
+`from pkg_resources import packaging` 报 ModuleNotFoundError。
+原因：pyiqa 的 clipiqa 依赖 OpenAI clip 包，而新版 setuptools（>=81）
+移除了 pkg_resources。处置：`pip install "setuptools<81"`
+（setup 第 5b 步与 requirements.txt 已固化）。
+另：clipiqa 首次运行还会从 openaipublic.azureedge.net 下载 CLIP RN50
+（约 254MB，Azure CDN 国内一般可达）；若被 reset，手动放置到
+`~/.cache/clip/RN50.pt`。

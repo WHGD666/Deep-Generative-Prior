@@ -9,3 +9,4 @@ pytest
 huggingface_hub
 pyiqa          # LPIPS/DISTS/MUSIQ/CLIPIQA/NIQE/MANIQA（会带 timm 等依赖）
 torchsde       # DiffBIR v2 的 k-diffusion 采样器依赖（勿被 torch 前缀误伤）
+setuptools<81  # clipiqa -> OpenAI clip 包依赖 pkg_resources（新版已移除，排障 #17）

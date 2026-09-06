@@ -21,7 +21,7 @@ echo "[信息] 枚举权重仓库: $REPO (via $MIRROR)"
 LIST=$(curl -fsSL "$MIRROR/api/models/$REPO" | python -c "
 import json, sys
 data = json.load(sys.stdin)
-exts = ('.pth', '.pt', '.ckpt', '.pkl', '.npy', '.npz', '.onnx', '.bin', '.safetensors', '.csv', '.txt')
+exts = ('.pth', '.pt', '.ckpt', '.pkl', '.npy', '.npz', '.onnx', '.bin', '.safetensors', '.csv', '.txt', '.mat')
 for f in data.get('siblings', []):
     name = f['rfilename']
     if name.lower().endswith(exts):

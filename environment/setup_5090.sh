@@ -107,6 +107,9 @@ echo "===== [5b/7] 评测链路兼容性 ====="
 # DiffBIR 把 numpy 钉在 1.26.x；opencv-headless 5.x 需要 numpy>=2（ABI 不兼容），
 # 统一降级到与 numpy 1.26 兼容的 4.9 版本（与 DiffBIR 的 opencv_python 4.9 同源）
 pip install "opencv-python-headless==4.9.0.80" >/dev/null 2>&1 || true
+# 新版 setuptools 移除了 pkg_resources，而 pyiqa clipiqa 依赖的 OpenAI clip 包
+# `from pkg_resources import packaging`，钉在保留 pkg_resources 的版本（排障 #17）
+pip install "setuptools<81" >/dev/null 2>&1 || true
 python -c "import cv2; import pyiqa; print('[确认] cv2', cv2.__version__, '| pyiqa', pyiqa.__version__)" \
   || echo "[警告] cv2/pyiqa 导入失败，见 TROUBLESHOOTING.md #12"
 
