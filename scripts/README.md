@@ -8,7 +8,7 @@
 |---|---|
 | `prepare_data.sh` | 解压官方数据 + 生成指纹 + 统计核查 |
 | `run_enhance.sh <run_id> <input_dir> <output_dir>` | 全管线增强（预处理→扩散→后处理） |
-| `run_eval.sh <run_id>` | 对指定 run 的输出做验证集评测 |
+| `run_eval.sh <run_id>` | 对指定 run 的输出做 val 评测 |
 | `pack_submission.sh <run_id>` | 校验 + 打包提交 zip |
 | `sync_artifacts.sh` | 云端产物回传本地（图片/指标） |
 

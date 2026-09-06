@@ -8,7 +8,7 @@
 submissions/
 └── sub01-20260909/            # 第 N 次提交 + 日期
     ├── manifest.md            # 来源 run_id、zip 文件名、文件清单摘要、打包校验结果
-    └── local_scores.json      # 该包在验证集上的本地指标
+    └── local_scores.json      # 该包在 val 上的本地指标
 ```
 
 ## 纪律

@@ -9,7 +9,7 @@ experiments/
 ├── README.md                  # 本文件
 ├── <run_id>/                  # 每个 run 的产物
 │   ├── outputs/               # 【不入库】输出图片
-│   └── eval.json              # 【入库】该 run 在验证集上的指标
+│   └── eval.json              # 【入库】该 run 在 val 上的指标
 └── <run_id>.json              # 【入库】run manifest（见根 README 7.3）
 ```
 
