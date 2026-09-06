@@ -130,6 +130,8 @@ python environment/download_weights.py
 # DiffBIR v2.x 权重：torch.hub 直下 HF 裸 URL 会被墙，必须经 hf-mirror 预下载
 # （约 8GB，支持断点续传；失败可单独重跑 bash environment/download_diffbir_weights.sh）
 bash environment/download_diffbir_weights.sh || echo "[警告] DiffBIR 权重下载未完成，请重跑 environment/download_diffbir_weights.sh"
+# pyiqa 评测权重同样是 HF 裸链直下（会被墙），同样预下载（排障 #16）
+bash environment/download_iqa_weights.sh || echo "[警告] IQA 评测权重未就位，请重跑 environment/download_iqa_weights.sh"
 
 echo "===== [7/7] 收尾 ====="
 pip cache purge 2>/dev/null || true

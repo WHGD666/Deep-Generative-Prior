@@ -137,3 +137,15 @@ DiffBIR 检测到本地文件即跳过网络下载）。清单与体积：
 4K 原图直接按 512+64 重叠分块喂入；`prescale: auto` 探测 k=1 自然不缩放。
 附带收益：每图瓦片数 ~190 → ~70，速度约快 3 倍且不丢原始细节。
 另在 `_run_cli` 注入 `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` 防碎片。
+
+## 16. pyiqa 评测权重下载 Connection reset（已根治）
+
+现象：run_eval 首次运行创建 LPIPS 指标时报
+`URLError <urlopen error [Errno 104] Connection reset by peer>`
+（alexnet 主干在 download.pytorch.org 可正常下载，仅 HF 裸链被墙）。
+原因：pyiqa 的 LPIPS/DISTS/MUSIQ/MANIQA/NIQE 权重挂在
+`huggingface.co/chaofengc/IQA-PyTorch-Weights`，经 torch.hub 直下，
+**HF_ENDPOINT 不生效**（与排障 #14 同机制）。
+处置：`bash environment/download_iqa_weights.sh` —— 从已安装的 pyiqa
+包源码收集全部 HF 裸链，经 hf-mirror 预下到 `~/.cache/torch/hub/pyiqa/`，
+pyiqa 检测到本地文件即跳过下载。幂等 + wget -c 断点续传。
