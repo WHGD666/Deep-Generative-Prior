@@ -98,6 +98,8 @@ class DiffBIRBackend:
         self.captioner = cfg.get("captioner", "none")
         self.noise_aug = cfg.get("noise_aug", 0)
         self.device = cfg.get("device", "cuda:0")
+        self.precision = cfg.get("precision", "fp16")
+        self.seed = cfg.get("seed", 0)
         self.hf_mirror = bool(cfg.get("hf_mirror", True))
         self.extra_args = list(cfg.get("extra_args", []))
 
@@ -114,9 +116,12 @@ class DiffBIRBackend:
                 "--captioner", self.captioner,
                 "--noise_aug", str(self.noise_aug),
                 "--cfg_scale", str(self.cfg_scale),
+                "--precision", self.precision,
+                "--seed", str(self.seed),
                 "--input", str(in_dir),
                 "--output", str(out_dir),
-                "--device", self.device,
+                # CLI 只认 cpu/cuda/mps 字面量；GPU 编号由 CUDA_VISIBLE_DEVICES 控制
+                "--device", self.device.split(":", 1)[0],
                 *self.extra_args,
             ]
             if self.steps:

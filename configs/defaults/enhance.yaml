@@ -13,7 +13,9 @@ backend:
     cfg_scale: 8        # 生成引导强度
     captioner: none     # 不加载 LLaVA 说明模型（省显存省时间）
     noise_aug: 0
-    device: cuda:0
+    precision: fp16     # 5090 上显存减半、速度翻倍；画质存疑时回退 fp32 对照
+    seed: 0             # 透传 --seed，保证子进程采样可复现
+    device: cuda:0      # CLI 只收 "cuda" 字面量，GPU 编号经 CUDA_VISIBLE_DEVICES 生效
     hf_mirror: true     # 子进程注入 HF_ENDPOINT=hf-mirror（国内自动下载权重）
     extra_args: []      # 应急通道：透传给官方 CLI 的额外参数
 
