@@ -170,7 +170,7 @@ def main(argv: list[str] | None = None) -> int:
     run_dir.mkdir(parents=True, exist_ok=True)
     logger = get_logger("pipeline", args.run_id, log_dir=run_dir)
 
-    cfg = {k: load_yaml(args[k]) for k in DEFAULTS}
+    cfg = {k: load_yaml(getattr(args, k)) for k in DEFAULTS}
     (run_dir / "config_effective.yaml").write_text(
         yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False), encoding="utf-8"
     )
@@ -186,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
         "start_time": datetime.now(timezone.utc).isoformat(),
         **git_info(),
         "command": command,
-        "configs": {k: str(Path(args[k]).resolve()) for k in DEFAULTS},
+        "configs": {k: str(Path(getattr(args, k)).resolve()) for k in DEFAULTS},
         "python_version": sys.version.split()[0],
         "n_images": None,
         "backend": None,
