@@ -96,6 +96,13 @@ pip install -r /tmp/diffbir_reqs.txt || {
 }
 pip install "pytorch-lightning>=1.9,<2.0" || echo "[警告] PL 版本待排错（见 TROUBLESHOOTING.md #4）"
 
+echo "===== [5c/7] 评测链路兼容性 ====="
+# DiffBIR 把 numpy 钉在 1.26.x；opencv-headless 5.x 需要 numpy>=2（ABI 不兼容），
+# 统一降级到与 numpy 1.26 兼容的 4.9 版本（与 DiffBIR 的 opencv_python 4.9 同源）
+pip install "opencv-python-headless==4.9.0.80" >/dev/null 2>&1 || true
+python -c "import cv2; import pyiqa; print('[确认] cv2', cv2.__version__, '| pyiqa', pyiqa.__version__)" \
+  || echo "[警告] cv2/pyiqa 导入失败，见 TROUBLESHOOTING.md #12"
+
 echo "===== [5b/7] torch 底座完整性校验 ====="
 if ! python -c "
 import torch
@@ -110,7 +117,8 @@ assert cap >= (12, 0), f'sm{cap[0]}{cap[1]} 不受支持'
 fi
 
 echo "===== [6/7] basicsr 兼容补丁 + 权重下载 ====="
-python environment/patch_basicsr.py
+# basicsr 缺失只影响人脸分支（默认关闭），不阻断主流程
+python environment/patch_basicsr.py || echo "[提示] basicsr 未安装，人脸分支（默认关闭）暂不可用，不影响主流程"
 python environment/download_weights.py
 if ls weights/diffbir/*.ckpt >/dev/null 2>&1; then
   mkdir -p third_party/DiffBIR/weights

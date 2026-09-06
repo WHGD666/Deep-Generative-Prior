@@ -94,3 +94,11 @@ df -h .
 处置：setup_5090.sh 已排除 torch/torchvision/xformers/pytorch-lightning 行，
 并在安装后强制校验 torch 底座（版本 2.7 + sm_120），破坏即自动重装。
 若你在旧版脚本里中断过：`pip cache purge` 清掉已下载的 cu118 轮子（约 2.4GB）再重跑。
+
+## 12. `import cv2` 报 numpy ABI 错误 / pyiqa 导入失败
+
+现象：`A module that was compiled using NumPy 1.x cannot be run in NumPy 2.x`（或反之）。
+原因：DiffBIR 依赖链把 numpy 钉在 1.26，而新版 opencv-python-headless 5.x 是按 numpy 2 编译的。
+处置：`pip install "opencv-python-headless==4.9.0.80"`（setup 已自动处理）。
+另：transformers 保持 DiffBIR 的 4.37.2（pyiqa 想要 5.0 只是版本声明冲突，
+我们用的 musiq/clipiqa/niqe/maniqa/lpips/dists 指标均不 import transformers）。
