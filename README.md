@@ -3,8 +3,9 @@
 > **赛道一：生成式图像增强可控性挑战**（Generate Controllable Image Enhancement）
 >
 > - 仓库：https://github.com/WHGD666/Deep-Generative-Prior
-> - 文档版本：v1.1（2026-09-07，随赛程滚动更新）
-> - 状态：**环境已搭建（远程 5090），管线调试中**；克隆者请从下方《快速开始》按序执行
+> - 文档版本：v1.2（2026-09-07，随赛程滚动更新）
+> - 状态：**管线已全链路跑通**（远程 5090，首个 baseline 见 EXP_LOG），进入 val 调优期；
+>   克隆者请从下方《快速开始》按序执行
 
 ---
 
@@ -61,11 +62,12 @@ pytest tests/ -v -m "not remote"                      # 全部 CPU 用例须全�
 pytest tests/test_smoke_diffbir.py -v -m remote -s    # 预期输出 [冒烟] ... k=1
 ```
 
-**第 4 步 · DiffBIR 权重**（约 6.3GB，务必在 tmux 内）
+**第 4 步 · 模型权重**（DiffBIR 6.3GB + IQA 评测权重，务必在 tmux 内）
 
 ```bash
 tmux new -s dl || tmux attach -t dl
 bash environment/download_diffbir_weights.sh   # wget -c 断点续传，中断重跑即续
+bash environment/download_iqa_weights.sh       # pyiqa 评测权重，一次下齐永久离线
 ```
 
 **第 5 步 · val 探路与全量评测**
@@ -411,12 +413,14 @@ Deep-Generative-Prior/
 
 每个**正式实验**分配唯一 `run_id`，模式：`<日期>_<主题>_<短哈希>`，如 `20260908_diffbir_baseline_a3f2`。
 
-`experiments/<run_id>/manifest.json` 最小字段（由 `run_pipeline` 自动生成，含逐图状态与失败记录）：
+`experiments/<run_id>/manifest.json` 最小字段（由 `run_pipeline` 自动生成）。
+`status` 取值：`completed`（全部成功）/ `partial`（部分图失败仍继续，配合
+`--resume` 断点续跑）/ `failed`（运行级失败）；逐图状态在 `per_image`。
 
 ```json
 {
   "run_id": "20260908_diffbir_baseline_a3f2",
-  "status": "completed | failed",
+  "status": "completed | partial | failed",
   "role": "diagnostic | scientific | competition | final",
   "git_commit": "<commit hash>",
   "config": "configs/20260908_diffbir_baseline_a3f2.yaml",

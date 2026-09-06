@@ -219,48 +219,54 @@ def main(argv: list[str] | None = None) -> int:
             cases = {c: p for c, p in cases.items() if c not in done}
             if done:
                 logger.info(f"[续跑] 跳过已有输出 {len(done)} 张: {done[:5]}{'...' if len(done) > 5 else ''}")
-        if not cases:
-            raise RuntimeError(
-                "过滤后没有待处理图片（检查 --limit/--subset/--resume 与输入目录是否匹配）"
-            )
-        manifest["n_images"] = len(cases)
-        logger.info(f"[{args.run_id}] 后端={backend.name}, 待处理 {len(cases)} 张")
-
-        first_img = uio.imread(next(iter(cases.values())))
-        probe_k = infer_upscale(backend.enhance_batch, center_probe_tile(first_img))
-        prescale_cfg = cfg["enhance"].get("prescale", "auto")
-        prescale = probe_k if prescale_cfg == "auto" else int(prescale_cfg)
-        manifest["backend"] = {
-            "name": backend.name, "probe_upscale": probe_k, "prescale": prescale,
-            "tile_size": cfg["enhance"]["tile_size"],
-            "overlap": cfg["enhance"]["overlap"],
-        }
-        logger.info(
-            f"[探测] 后端放大倍率 k={probe_k}, 预缩放 p={prescale}, "
-            f"tile={cfg['enhance']['tile_size']}(overlap={cfg['enhance']['overlap']})"
-        )
-
         n_failed = 0
-        for i, (case, path) in enumerate(cases.items(), 1):
-            logger.info(f"[{i}/{len(cases)}] case={case}")
-            # 单图失败不毁全局：记录后继续，最后以 partial 状态收尾（配合 --resume 续跑）
-            try:
-                img = uio.imread(path)
-                result, info = run_image(
-                    case, img, cfg, backend, engine, probe_k, prescale, logger
+        if not cases:
+            if not args.resume:
+                raise RuntimeError(
+                    "过滤后没有待处理图片（检查 --limit/--subset 与输入目录是否匹配）"
                 )
-                uio.imwrite(out_dir / f"{case}.jpg", result)
-                info["status"] = "ok"
-                manifest["per_image"][case] = info
-            except Exception as e:  # noqa: BLE001 - 一张烂图不能报废整夜跑
-                n_failed += 1
-                manifest["per_image"][case] = {
-                    "status": "failed",
-                    "error": f"{type(e).__name__}: {e}"[-500:],
-                }
-                logger.error(f"[{case}] 失败跳过: {type(e).__name__}: {e}")
+            # 断点续跑时"全部已完成"属正常情形：记完成态，不探测、不开跑
+            logger.info("[续跑] 全部 case 均已有输出，视为已完成")
+            manifest["n_images"] = 0
+        else:
+            manifest["n_images"] = len(cases)
+            logger.info(f"[{args.run_id}] 后端={backend.name}, 待处理 {len(cases)} 张")
 
-        manifest["n_failed"] = n_failed
+            first_img = uio.imread(next(iter(cases.values())))
+            probe_k = infer_upscale(backend.enhance_batch, center_probe_tile(first_img))
+            prescale_cfg = cfg["enhance"].get("prescale", "auto")
+            prescale = probe_k if prescale_cfg == "auto" else int(prescale_cfg)
+            manifest["backend"] = {
+                "name": backend.name, "probe_upscale": probe_k, "prescale": prescale,
+                "tile_size": cfg["enhance"]["tile_size"],
+                "overlap": cfg["enhance"]["overlap"],
+            }
+            logger.info(
+                f"[探测] 后端放大倍率 k={probe_k}, 预缩放 p={prescale}, "
+                f"tile={cfg['enhance']['tile_size']}(overlap={cfg['enhance']['overlap']})"
+            )
+
+            for i, (case, path) in enumerate(cases.items(), 1):
+                logger.info(f"[{i}/{len(cases)}] case={case}")
+                # 单图失败不毁全局：记录后继续，最后以 partial 状态收尾（配合 --resume 续跑）
+                try:
+                    img = uio.imread(path)
+                    result, info = run_image(
+                        case, img, cfg, backend, engine, probe_k, prescale, logger
+                    )
+                    uio.imwrite(out_dir / f"{case}.jpg", result)
+                    info["status"] = "ok"
+                    manifest["per_image"][case] = info
+                except Exception as e:  # noqa: BLE001 - 一张烂图不能报废整夜跑
+                    n_failed += 1
+                    manifest["per_image"][case] = {
+                        "status": "failed",
+                        "error": f"{type(e).__name__}: {e}"[-500:],
+                    }
+                    logger.error(f"[{case}] 失败跳过: {type(e).__name__}: {e}")
+
+            manifest["n_failed"] = n_failed
+
         manifest["status"] = "completed" if n_failed == 0 else "partial"
         manifest["end_time"] = datetime.now(timezone.utc).isoformat()
     except Exception as e:  # noqa: BLE001 - 失败实验也要留下完整记录
@@ -276,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if manifest["status"] != "completed":
         return 1
-    logger.info(f"[完成] 输出目录: {out_dir}")
+    logger.info(f"[完成] 输出目录: {out_dir}（{manifest.get('n_images', 0)} 张）")
     return 0
 
 

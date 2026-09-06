@@ -20,8 +20,10 @@ python -c "import torch; print(torch.cuda.get_device_capability(0))"   # 应打�
 
 ## 3. HuggingFace 下载超时/断连
 
-处置：`export HF_ENDPOINT=https://hf-mirror.com` 后重跑 `python environment/download_weights.py`，
-或按 weights_download.md 手动下载放位。
+处置：权重一律走预下载脚本（`download_diffbir_weights.sh` /
+`download_iqa_weights.sh`，见 weights_download.md）；huggingface_hub
+路径的零星下载（如 timm 骨干）由 run 脚本注入的 `HF_ENDPOINT=hf-mirror`
+兜底。机制说明见 #14/#16/#18。
 
 ## 4. DiffBIR 启动即报 pytorch_lightning 相关 ImportError
 
@@ -49,29 +51,28 @@ python third_party/DiffBIR/inference.py --help
 `DiffBIRBackend.enhance_batch`，改动记 EXP_LOG。
 典型差异：`--steps` 若不被识别，把配置里 `steps: 50` 改为 `steps: 0` 即可去掉该参数。
 
-## 6. DiffBIR 权重自动下载失败
+## 6. DiffBIR 权重下载失败（Connection reset / 404）
 
-现象：首次推理时报 HF 下载错误（404/连接超时）。
-处置：
+处置（2026-09-07 起为标准路径，"运行时自动下载"方案已废弃，见 #14）：
 ```bash
-export HF_ENDPOINT=https://hf-mirror.com     # 我们的子进程默认已注入，可显式覆盖
-df -h /data                                   # 确认磁盘够（v2.1.pt 约 1~2GB）
+bash environment/download_diffbir_weights.sh   # wget -c 走 hf-mirror，断点续传
+df -h /data                                     # 确认磁盘（共约 6.3GB）
 ```
-仍失败则按 weights_download.md 手动下载后，用 `extra_args` 把权重路径传给
-官方 CLI（具体参数名以 `inference.py --help` 输出为准）。
+文件落位 `third_party/DiffBIR/weights/` 后推理完全离线。
 
 ## 7. 显存 OOM
 
 处置（按代价从小到大）：
-1. `configs/defaults/enhance.yaml`：`tile_size: 512 -> 384`；
-2. `steps: 50 -> 30`；
-3. 确认没有其他进程占卡（`nvidia-smi`）；
-4. DiffBIR 内部如支持 fp16/半精度开关，用 `extra_args` 打开。
+1. 确认 `upscale: 1`（排障 #15 的主因，512 瓦片 + upscale=4 必炸）；
+2. `configs/defaults/enhance.yaml`：`tile_size: 512 -> 384`；
+3. `steps: 50 -> 30`；
+4. 确认没有其他进程占卡（`nvidia-smi`）。
 
 ## 8. pyiqa 首次运行卡在下载指标模型
 
-处置：`export HF_ENDPOINT=https://hf-mirror.com`；或预先
-`python -c "import pyiqa; [pyiqa.create_metric(m, device='cuda:0') for m in ['musiq','clipiqa','niqe','maniqa','lpips','dists']]"` 预热。
+处置：`bash environment/download_iqa_weights.sh` 预下载（排障 #16，
+约 12GB 一次下齐永久离线）；timm 骨干由 run 脚本注入的
+`HF_ENDPOINT=hf-mirror` 兜底（排障 #18）。
 
 ## 9. 磁盘不足（60GB 红线）
 

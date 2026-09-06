@@ -35,3 +35,15 @@
 - `cfg_scale` 基准从 4.0 调整为 8（v2.1 示例口径），λ 调参在 val 上重新扫描；
 - 首次冒烟会多花几分钟下载权重（约 1~2GB，走 hf-mirror）；
 - face 版（v1_face）尚未集成，人脸分支仍默认关闭（GFPGAN 方案不变）。
+
+## 后记（2026-09-07 实测修正，两处决策已被推翻）
+
+1. **"权重运行时自动下载"不可用**：v2.x 经 `torch.hub` 直下 `huggingface.co`
+   裸 URL，`HF_ENDPOINT` 对其无效（只影响 huggingface_hub 库），国内机房
+   全部 Connection reset（排障 #14）。改为脚本预下载：
+   `environment/download_diffbir_weights.sh`（6.3GB）。pyiqa 评测权重与
+   timm 骨干同理（排障 #16/#18，`download_iqa_weights.sh` + 脚本注入 HF_ENDPOINT）。
+2. **`--upscale 4` 改为 `--upscale 1`**：实测 v2.1 的 upscale 语义是"先把输入
+   双三次放大 N 倍再修复"，×4 会把 512 瓦片撑到 2048² 再过 VAE，
+   中间层注意力分配 16GiB 直接 OOM（排障 #15）。赛题为同分辨率修复，
+   本就无需放大；改后 4K 原图直接 512 瓦片输入，速度约快 3 倍。

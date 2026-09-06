@@ -1,36 +1,48 @@
-# 模型权重手动下载备选清单
+# 模型权重清单与下载（全部走脚本，幂等可重跑）
 
-> 2026-09 更新：DiffBIR 官方重写代码库（v2.x），权重迁移到 `lxq007/DiffBIR-v2`，
-> 且支持**首次推理时自动下载**——正常情况下本文件只剩 GFPGAN 需要关心。
+> 2026-09-07 更新：实测 DiffBIR/pyiqa 的"HuggingFace 裸 URL 运行时自动下载"
+> 在国内机房全部被墙（torch.hub 直下不吃 HF_ENDPOINT，排障 #14/#16/#18），
+> **一律用仓库脚本预下载**。脚本均为 wget -c 断点续传，中断重跑即续。
 
-## 1. DiffBIR（主选后端，v2.x）
-
-**默认无需手动下载**：`src/enhance/backends` 已注入 `HF_ENDPOINT=hf-mirror`，
-首次运行冒烟测试/管线时自动拉取（v2.1.pt 等约 1~2GB + stage1 cleaner）。
-
-手动备选（自动下载失败时）：
-- HF 仓库：`huggingface.co/lxq007/DiffBIR-v2`（镜像：hf-mirror.com/lxq007/DiffBIR-v2）
-- 相关文件：`v2.1.pt`（推荐）、`v2.pth`、`v1_general.pth`、`codeformer_swinir.ckpt`（stage1）
-- 自动下载失败时检查：`HF_ENDPOINT` 是否被代理脚本覆盖、磁盘剩余空间
-
-## 2. GFPGAN v1.4（人脸分支，可选）
-
-| 文件 | 来源 | 放置位置 |
-|---|---|---|
-| `GFPGANv1.4.pth` | github.com/TencentARC/GFPGAN/releases（v1.3.4 release 资产） | `weights/gfpgan/GFPGANv1.4.pth` |
-
-## 3. ResShift（保底后端，可选）
-
-| 文件 | 来源 | 放置位置 |
-|---|---|---|
-| `resshift_x4.pth`（或其 Model Zoo 提供的等价 ×4 权重） | github.com/zsyOAOA/ResShift 的 README/Model Zoo | `weights/resshift/` |
-
-> ResShift 的任务配置 yaml 需与其权重要求一致（×4 SR 或 ×1 修复），
-> 后端为 ×1 修复时，探测机制会自动识别（无需改我们的代码）。
-
-## 放好之后的验证
+## 1. DiffBIR v2.x（主选后端，必下）
 
 ```bash
-ls -lh weights/gfpgan/        # GFPGANv1.4.pth 约 350MB
-pytest tests/test_smoke_diffbir.py -v -m remote   # 首次运行会自动下载 DiffBIR 权重
+bash environment/download_diffbir_weights.sh    # 走 hf-mirror，约 6.3GB
+```
+
+| 文件 | 用途 | 体积 | 落位 |
+|---|---|---|---|
+| `realesrgan_s4_swinir_100k.pth` | stage1 去噪 cleaner | 87MB | `third_party/DiffBIR/weights/` |
+| `sd2.1-base-zsnr-laionaes5.ckpt` | SD2.1 底模 | 4.9GB | 同上 |
+| `DiffBIR_v2.1.pt` | ControlNet 主模型 | 1.4GB | 同上 |
+
+DiffBIR 的 `load_file_from_url` 检测到本地同名文件即跳过网络下载，之后推理完全离线。
+
+## 2. pyiqa 评测权重（评测必下）
+
+```bash
+bash environment/download_iqa_weights.sh    # 走 hf-mirror，全仓库约 12GB（一次下齐永久离线）
+```
+
+枚举官方权重仓库 `chaofengc/IQA-PyTorch-Weights`（含 LPIPS/DISTS/MUSIQ/NIQE/MANIQA
+及 .mat 参数文件），下到 pyiqa 默认缓存 `~/.cache/torch/hub/pyiqa/`。
+
+## 3. GFPGAN v1.4（人脸分支，可选；默认关闭）
+
+```bash
+python environment/download_weights.py    # github release 直链，约 350MB -> weights/gfpgan/
+```
+
+国内直连失败时挂代理（SSH 隧道见根 README 快速开始）或手动下载放置。
+
+## 4. ResShift（保底后端，可选，暂未启用）
+
+按其 Model Zoo 手动下载 `resshift_x4.pth` 到 `weights/resshift/`（github.com/zsyOAOA/ResShift）。
+
+## 验证
+
+```bash
+ls -lh third_party/DiffBIR/weights/          # 3 个文件齐全
+ls -lh ~/.cache/torch/hub/pyiqa/ | head      # LPIPS/DISTS/MUSIQ/niqe*.mat 等在位
+pytest tests/test_smoke_diffbir.py -v -m remote -s   # 离线冒烟，应输出 k=1
 ```

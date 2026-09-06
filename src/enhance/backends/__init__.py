@@ -65,9 +65,10 @@ class DiffBIRBackend:
     """DiffBIR 官方 CLI（inference.py，v2.x 重写版）驱动。
 
     2024-04 官方重写了代码库：入口从 inference_bsr.py 改为 inference.py，
-    权重迁移到 HF `lxq007/DiffBIR-v2`（v2.1.pt / v2.pth / v1_general.pth 等），
-    且支持运行时自动下载（stage1 cleaner 等在首次推理时经 HF 拉取）。
-    因此本后端不预下载权重，只保证运行环境带 HF_ENDPOINT=hf-mirror（国内）。
+    权重迁移到 HF `lxq007/DiffBIR-v2`。注意：其权重经 torch.hub 直下 HF
+    裸 URL（HF_ENDPOINT 不生效，国内被墙，排障 #14），**必须先运行
+    environment/download_diffbir_weights.sh 预下载**到 third_party/DiffBIR/weights/，
+    之后 load_file_from_url 检测到本地文件即完全离线。
 
     配置（configs/defaults/enhance.yaml -> backends.diffbir）：
         repo_dir: third_party/DiffBIR
