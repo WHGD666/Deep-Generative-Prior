@@ -87,7 +87,8 @@ cat third_party_commits.txt
 echo "===== [5/7] DiffBIR 依赖（剔除 torch/xformers/PL，防止拖垮 cu128 底座） ====="
 # xformers==0.0.25+cu118 会把 torch 拽回 2.2.2+cu118（不支持 Blackwell），必须排除；
 # pytorch-lightning 由下一步的显式版本约束决定，不吃第三方 pin。
-grep -Eiv "^(torch|torchvision|torchaudio|xformers|pytorch-lightning)" \
+# 注意 ^(torch...) 的前缀匹配曾误杀 torchsde（DiffBIR v2 采样器依赖），已收紧为精确包名。
+grep -Eiv "^(torch|torchvision|torchaudio|xformers|pytorch-lightning)(==|>=|<=|~=|>|<|$)" \
   third_party/DiffBIR/requirements.txt > /tmp/diffbir_reqs.txt || true
 pip install -r /tmp/diffbir_reqs.txt || {
   echo "[回退] requirements 安装失败，改用核心依赖清单"

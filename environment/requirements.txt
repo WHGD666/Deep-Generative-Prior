@@ -8,3 +8,4 @@ tqdm
 pytest
 huggingface_hub
 pyiqa          # LPIPS/DISTS/MUSIQ/CLIPIQA/NIQE/MANIQA（会带 timm 等依赖）
+torchsde       # DiffBIR v2 的 k-diffusion 采样器依赖（勿被 torch 前缀误伤）
