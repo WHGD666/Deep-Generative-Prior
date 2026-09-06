@@ -12,19 +12,23 @@ CASES = [1, 2, 3]
 
 
 def _make_pair(tmp_path, sizes=None, extra=None, drop=None):
-    """构造 (input_dir, output_dir)：默认 3 张齐全同尺寸；可注入异常。"""
+    """构造 (input_dir, output_dir)：默认 3 张齐全同尺寸；可注入异常。
+
+    sizes 只作用于**输出侧**（模拟输出尺寸错误），输入侧保持基准尺寸。
+    """
     in_dir, out_dir = tmp_path / "in", tmp_path / "out"
     in_dir.mkdir()
     out_dir.mkdir()
     sizes = sizes or {}
     for i in CASES:
-        img = make_img(48, 64, seed=i)
-        if sizes.get(i):
-            h, w = sizes[i]
-            img = np.asarray(Image.fromarray(img).resize((w, h)), dtype=np.uint8)
-        uio.imwrite(in_dir / f"case{i}.jpg", img)
+        base = make_img(48, 64, seed=i)
+        uio.imwrite(in_dir / f"case{i}.jpg", base)
         if drop != i:
-            uio.imwrite(out_dir / f"case{i}.jpg", img)
+            out_img = base
+            if sizes.get(i):
+                h, w = sizes[i]
+                out_img = np.asarray(Image.fromarray(base).resize((w, h)), dtype=np.uint8)
+            uio.imwrite(out_dir / f"case{i}.jpg", out_img)
     for name, arr in (extra or {}).items():
         uio.imwrite(out_dir / name, arr)
     return in_dir, out_dir
