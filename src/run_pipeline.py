@@ -76,9 +76,11 @@ def discover_inputs(input_dir: Path, pattern: str) -> dict[str, Path]:
     for p in sorted(input_dir.iterdir()):
         if not p.is_file() or p.suffix.lower() not in (".jpg", ".jpeg"):
             continue
-        stem = p.stem
-        if stem.startswith(prefix) and stem.endswith(suffix):
-            case = stem[len(prefix): len(stem) - len(suffix) if suffix else None]
+        # 用完整文件名匹配（suffix 含扩展名）；stem 已去掉 .jpg 会导致永远匹配不上
+        name = p.name
+        if name.startswith(prefix) and name.endswith(suffix):
+            end = len(name) - len(suffix) if suffix else None
+            case = name[len(prefix):end]
             if case:
                 cases[case] = p
     if not cases:
