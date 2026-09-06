@@ -2,13 +2,13 @@
 
 下载清单：
 1. GFPGAN v1.4（人脸分支，可选）-> weights/gfpgan/
-   官方 GitHub release 直链。
-2. DiffBIR v2.x 权重【无需手动下载】：新版代码在首次推理时自动从 HF
-   拉取（lxq007/DiffBIR-v2），国内环境由后端自动注入 hf-mirror 端点；
-   首次运行冒烟测试时会看到权重下载进度，属正常现象。
+   官方 GitHub release 直链（国内直连失败时走代理或手动放置）。
+2. DiffBIR v2.x 权重【由独立脚本负责，勿用本脚本】：
+   torch.hub 直下 HF 裸 URL 不吃 HF_ENDPOINT（排障 #14），必须
+   `bash environment/download_diffbir_weights.sh` 经 hf-mirror 预下载
+   到 third_party/DiffBIR/weights/（约 6.3GB，wget -c 断点续传）。
 
 用法：python environment/download_weights.py [--skip-gfpgan]
-提示：国内环境如 GitHub 直连失败，先 export HF_ENDPOINT 与代理。
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def main() -> int:
     ap.add_argument("--skip-gfpgan", action="store_true")
     args = ap.parse_args()
 
-    print("[信息] DiffBIR v2.x 权重无需手动下载：首次推理时自动拉取（hf-mirror）")
+    print("[信息] DiffBIR v2.x 权重不在此下载：bash environment/download_diffbir_weights.sh")
 
     if not args.skip_gfpgan:
         gfp_dir = WEIGHTS / "gfpgan"

@@ -7,8 +7,6 @@ pyiqa 其余默认越高越好。口径声明在 configs/defaults/evaluate.yaml�
 
 from __future__ import annotations
 
-import numpy as np
-
 LOWERS_BETTER = ("niqe",)
 
 DEFAULT_NR_METRICS = ["musiq", "clipiqa", "niqe", "maniqa"]

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import subprocess
 import sys
 import time
@@ -164,6 +165,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--postprocess", default=DEFAULTS["postprocess"])
     ap.add_argument("--limit", type=int, default=0, help="只处理前 N 张（调试）")
     ap.add_argument("--subset", default="", help="逗号分隔 case 列表（调试）")
+    ap.add_argument("--resume", action="store_true",
+                    help="跳过输出已存在的 case（同配置中断续跑；换配置时禁用）")
     args = ap.parse_args(argv)
 
     run_dir = PROJECT_ROOT / "experiments" / args.run_id
@@ -179,11 +182,9 @@ def main(argv: list[str] | None = None) -> int:
         yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False), encoding="utf-8"
     )
 
-    command = (
-        f"python -m src.run_pipeline --run_id {args.run_id} "
-        f"--input_dir {args.input_dir} --input_pattern {args.input_pattern} "
-        f"--output_dir {args.output_dir}"
-    )
+    # 忠实记录本次实际命令行（含 --limit/--subset/--resume），保证可复现
+    invoked = argv if argv is not None else sys.argv[1:]
+    command = "python -m src.run_pipeline " + " ".join(shlex.quote(a) for a in invoked)
     manifest = {
         "run_id": args.run_id,
         "status": "running",
@@ -213,6 +214,15 @@ def main(argv: list[str] | None = None) -> int:
             cases = {c: p for c, p in cases.items() if c in keep}
         if args.limit:
             cases = dict(list(cases.items())[: args.limit])
+        if args.resume:
+            done = [c for c in cases if (out_dir / f"{c}.jpg").is_file()]
+            cases = {c: p for c, p in cases.items() if c not in done}
+            if done:
+                logger.info(f"[续跑] 跳过已有输出 {len(done)} 张: {done[:5]}{'...' if len(done) > 5 else ''}")
+        if not cases:
+            raise RuntimeError(
+                "过滤后没有待处理图片（检查 --limit/--subset/--resume 与输入目录是否匹配）"
+            )
         manifest["n_images"] = len(cases)
         logger.info(f"[{args.run_id}] 后端={backend.name}, 待处理 {len(cases)} 张")
 
@@ -230,16 +240,28 @@ def main(argv: list[str] | None = None) -> int:
             f"tile={cfg['enhance']['tile_size']}(overlap={cfg['enhance']['overlap']})"
         )
 
+        n_failed = 0
         for i, (case, path) in enumerate(cases.items(), 1):
             logger.info(f"[{i}/{len(cases)}] case={case}")
-            img = uio.imread(path)
-            result, info = run_image(
-                case, img, cfg, backend, engine, probe_k, prescale, logger
-            )
-            uio.imwrite(out_dir / f"{case}.jpg", result)
-            manifest["per_image"][case] = info
+            # 单图失败不毁全局：记录后继续，最后以 partial 状态收尾（配合 --resume 续跑）
+            try:
+                img = uio.imread(path)
+                result, info = run_image(
+                    case, img, cfg, backend, engine, probe_k, prescale, logger
+                )
+                uio.imwrite(out_dir / f"{case}.jpg", result)
+                info["status"] = "ok"
+                manifest["per_image"][case] = info
+            except Exception as e:  # noqa: BLE001 - 一张烂图不能报废整夜跑
+                n_failed += 1
+                manifest["per_image"][case] = {
+                    "status": "failed",
+                    "error": f"{type(e).__name__}: {e}"[-500:],
+                }
+                logger.error(f"[{case}] 失败跳过: {type(e).__name__}: {e}")
 
-        manifest["status"] = "completed"
+        manifest["n_failed"] = n_failed
+        manifest["status"] = "completed" if n_failed == 0 else "partial"
         manifest["end_time"] = datetime.now(timezone.utc).isoformat()
     except Exception as e:  # noqa: BLE001 - 失败实验也要留下完整记录
         manifest["status"] = "failed"

@@ -69,12 +69,17 @@ pip install -r environment/requirements.txt
 
 echo "===== [4/7] 克隆第三方仓库 ====="
 mkdir -p third_party
-if [[ ! -d third_party/DiffBIR ]]; then
-  git clone https://github.com/XPixelGroup/DiffBIR.git third_party/DiffBIR
-fi
-if [[ "${SKIP_RESSHIFT:-0}" != "1" && ! -d third_party/ResShift ]]; then
-  git clone https://github.com/zsyOAOA/ResShift.git third_party/ResShift || \
-    echo "[警告] ResShift 克隆失败（保底后端，可稍后手动补）"
+# 国内机房 GitHub 直连常被 reset：先试直连，失败自动走 ghfast.top 代理
+clone_repo() {
+  local url=$1 dest=$2
+  [[ -d "$dest" ]] && return 0
+  git clone "$url" "$dest" 2>/dev/null || \
+    git clone "https://ghfast.top/$url" "$dest" || \
+    echo "[警告] $dest 克隆失败（两条通道均不可用，可手动克隆到 $dest）"
+}
+clone_repo https://github.com/XPixelGroup/DiffBIR.git third_party/DiffBIR
+if [[ "${SKIP_RESSHIFT:-0}" != "1" ]]; then
+  clone_repo https://github.com/zsyOAOA/ResShift.git third_party/ResShift
 fi
 : > third_party_commits.txt
 for d in third_party/*/; do
@@ -98,14 +103,14 @@ pip install -r /tmp/diffbir_reqs.txt || {
 }
 pip install "pytorch-lightning>=1.9,<2.0" || echo "[警告] PL 版本待排错（见 TROUBLESHOOTING.md #4）"
 
-echo "===== [5c/7] 评测链路兼容性 ====="
+echo "===== [5b/7] 评测链路兼容性 ====="
 # DiffBIR 把 numpy 钉在 1.26.x；opencv-headless 5.x 需要 numpy>=2（ABI 不兼容），
 # 统一降级到与 numpy 1.26 兼容的 4.9 版本（与 DiffBIR 的 opencv_python 4.9 同源）
 pip install "opencv-python-headless==4.9.0.80" >/dev/null 2>&1 || true
 python -c "import cv2; import pyiqa; print('[确认] cv2', cv2.__version__, '| pyiqa', pyiqa.__version__)" \
   || echo "[警告] cv2/pyiqa 导入失败，见 TROUBLESHOOTING.md #12"
 
-echo "===== [5b/7] torch 底座完整性校验 ====="
+echo "===== [5c/7] torch 底座完整性校验 ====="
 if ! python -c "
 import torch
 assert torch.__version__.startswith('2.7'), f'torch 被第三方依赖改成了 {torch.__version__}'
@@ -130,8 +135,11 @@ echo "===== [7/7] 收尾 ====="
 pip cache purge 2>/dev/null || true
 df -h . | tail -1
 echo "============================================================"
-echo "环境搭建完成。下一步："
-echo "  1) bash scripts/prepare_data.sh"
-echo "  2) pytest tests/ -v -m 'not remote'   # 本地逻辑自检（无需 GPU）"
+echo "环境搭建完成。下一步（项目根目录）："
+echo "  1) 上传官方数据 zip 后: bash scripts/prepare_data.sh <zip文件名>"
+echo "  2) pytest tests/ -v -m 'not remote'   # CPU 逻辑自检（无需 GPU）"
 echo "  3) pytest tests/test_smoke_diffbir.py -v -m remote   # DiffBIR 集成冒烟"
+echo "     （权重未就位时先: bash environment/download_diffbir_weights.sh）"
+echo "  4) bash scripts/run_enhance.sh <run_id> data/val '{case}_lq.jpg' experiments/<run_id>/outputs --limit 1"
+echo "详见 README《快速开始》一节。"
 echo "============================================================"

@@ -3,7 +3,7 @@
 
 denoise:
   enabled: true
-  gaussian_sigma: 0.6   # 轻度高斯；注意与后端 ×4 预缩放的平滑效果叠加，宁轻勿重
+  gaussian_sigma: 0.6   # 轻度高斯；后端为同分辨率分块修复（upscale=1），宁轻勿重
   median_size: 0        # 0=关闭；对椒盐噪点可设 3
 
 deblur:

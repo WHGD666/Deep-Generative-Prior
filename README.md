@@ -3,13 +3,14 @@
 > **赛道一：生成式图像增强可控性挑战**（Generate Controllable Image Enhancement）
 >
 > - 仓库：https://github.com/WHGD666/Deep-Generative-Prior
-> - 文档版本：v1.0（2026-09-06 初稿，随赛程滚动更新）
-> - 状态：**规划阶段** → 待确认后进入环境搭建
+> - 文档版本：v1.1（2026-09-07，随赛程滚动更新）
+> - 状态：**环境已搭建（远程 5090），管线调试中**；克隆者请从下方《快速开始》按序执行
 
 ---
 
 ## 目录
 
+0. [快速开始（从零到提交）](#快速开始从零到提交)
 1. [赛事概述](#1-赛事概述)
 2. [赛题要求完整整理](#2-赛题要求完整整理)
 3. [数据集说明与实测统计](#3-数据集说明与实测统计)
@@ -21,6 +22,85 @@
 9. [提交规范与检查清单](#9-提交规范与检查清单)
 10. [风险与预案](#10-风险与预案)
 11. [环境与算力](#11-环境与算力)
+
+---
+
+## 快速开始（从零到提交）
+
+> 适用于：拿到一台全新租用的 RTX 5090 Linux 实例（平台 PyTorch/CUDA 12.8 系镜像即可，
+> 本仓库自建独立 conda 环境），从克隆到产出提交包的全过程。全程幂等，任何一步失败
+> 重跑同一条命令即可续接。
+
+**第 0 步 · 获取代码与数据**（本机 → 云端）
+
+```bash
+# 国内网络克隆可用 ghfast.top 代理前缀（直连失败时）：
+git clone https://github.com/WHGD666/Deep-Generative-Prior.git
+cd Deep-Generative-Prior
+# 官方数据 zip 从本机 scp 上传到项目根（文件名含中文时先改名为 data.zip）：
+# scp -P <端口> data.zip root@<host>:/data/coding/Deep-Generative-Prior/
+```
+
+**第 1 步 · 一键环境**（远程，约 20-40 分钟；幂等可重跑）
+
+```bash
+bash environment/setup_5090.sh      # conda 环境 camera310 + torch cu128 + 第三方仓库（含代理回退）
+conda activate camera310
+```
+
+**第 2 步 · 数据解压校验**
+
+```bash
+bash scripts/prepare_data.sh data.zip   # 输出 val 10 张(5 对) / test 100 张 + 数据集指纹
+```
+
+**第 3 步 · CPU 测试 + GPU 冒烟**
+
+```bash
+pytest tests/ -v -m "not remote"                      # 全部 CPU 用例须全绿
+pytest tests/test_smoke_diffbir.py -v -m remote -s    # 预期输出 [冒烟] ... k=1
+```
+
+**第 4 步 · DiffBIR 权重**（约 6.3GB，务必在 tmux 内）
+
+```bash
+tmux new -s dl || tmux attach -t dl
+bash environment/download_diffbir_weights.sh   # wget -c 断点续传，中断重跑即续
+```
+
+**第 5 步 · val 探路与全量评测**
+
+```bash
+# 首图探路（约 3-8 分钟，确认管线端到端可跑）
+bash scripts/run_enhance.sh 20260907_val_probe data/val "{case}_lq.jpg" \
+    experiments/20260907_val_probe/outputs --limit 1
+# val 全量（10 张）+ 本地 FR/NR 评测
+bash scripts/run_enhance.sh <run_id> data/val "{case}_lq.jpg" experiments/<run_id>/outputs
+bash scripts/run_eval.sh <run_id> experiments/<run_id>/outputs data/val
+# 中断/部分失败续跑：原命令末尾加 --resume
+```
+
+**第 6 步 · test 100 张正式出图**（tmux 内过夜，预计数小时）
+
+```bash
+bash scripts/run_enhance.sh <run_id> data/test "{case}.jpg" experiments/<run_id>/outputs
+```
+
+**第 7 步 · 打包提交**（先填 `configs/defaults/submit.yaml` 三个占位字段）
+
+```bash
+bash scripts/pack_submission.sh <run_id> sub01   # 内置强制校验，不过即拒绝
+# 提交后当天回填 SUBMISSIONS.md 台账
+```
+
+**已知网络坑速查**（完整 15 条见 `environment/TROUBLESHOOTING.md`）：
+
+- GitHub 直连被 reset → setup 脚本已内置 ghfast.top 回退；手动 `git pull` 建议配置
+  `git config url."https://ghfast.top/https://github.com/".insteadOf = https://github.com/`
+- HuggingFace 裸 URL 被墙（torch.hub 直下不吃 HF_ENDPOINT）→ 一律走第 4 步预下载脚本
+- 长任务（权重下载 / 全量推理）一律放 `tmux`，SSH 断线不中断
+- 可选：本机代理经 SSH 隧道上云（本机 Clash 端口 7897 为例）：
+  `ssh -p <端口> -R 17890:127.0.0.1:7897 root@<host>`，远端 `export https_proxy=http://127.0.0.1:17890`
 
 ---
 
@@ -136,7 +216,7 @@ D:\daima\tianchi1\
     └── test\           # case1~case100.jpg
 ```
 
-> ⚠️ 官方 zip 在 Windows 自带解压工具下会因 UTF-8 文件名乱码导致解压失败，须用 Python `zipfile` 转码解压（脚本见 `src/data_prep/extract_dataset.py`，待编写）。
+> ⚠️ 官方 zip 在 Windows 自带解压工具下会因 UTF-8 文件名乱码导致解压失败，须用 Python `zipfile` 转码解压（已实现：`src/data_prep/extract_dataset.py`，一键入口 `scripts/prepare_data.sh`）。
 >
 > 命名约定：官方所称**验证集/测试集**在本项目中统一称为 **val / test**（目录、代码、文档均用 val/test），官方原文用词见 `docs/competition/`。
 
@@ -249,7 +329,7 @@ val 未见**小人脸**样例，但 test 明确包含该类场景，方案必须
 
 - 租用 **RTX 5090（默认 60GB 存储）** 作为主力训练/推理机；本地 4060 仅用于代码调试与小图验证。
 - 模型权重（DiffBIR + SD2.1 约 6~8GB）在 60GB 存储内可容纳，注意清理 pip 缓存。
-- 云端环境用脚本固化（`src/setup_env.sh`），保证：本地调试 → 云端全量跑 → **决赛现场复现** 三者环境一致。
+- 云端环境用脚本固化（`environment/setup_5090.sh`，幂等可重跑），保证：本地调试 → 云端全量跑 → **决赛现场复现** 三者环境一致。
 
 ---
 
@@ -331,7 +411,7 @@ Deep-Generative-Prior/
 
 每个**正式实验**分配唯一 `run_id`，模式：`<日期>_<主题>_<短哈希>`，如 `20260908_diffbir_baseline_a3f2`。
 
-`experiments/<run_id>.json` 最小字段：
+`experiments/<run_id>/manifest.json` 最小字段（由 `run_pipeline` 自动生成，含逐图状态与失败记录）：
 
 ```json
 {

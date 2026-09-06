@@ -7,7 +7,8 @@ HOST=${1:?用法: sync_artifacts.sh user@host [remote_path]}
 REMOTE=${2:-~/Deep-Generative-Prior}
 
 # 回传实验记录（manifest/eval/log，小文件，全量拿回）
-rsync -avz --include="manifest.json" --include="eval*.json" \
+# 注意 --include="*/" 必须有：授权 rsync 递归进入 run 子目录，否则一条也同步不到
+rsync -avz --include="*/" --include="manifest.json" --include="eval*.json" \
       --include="config_effective.yaml" --include="*.log" --exclude="*" \
       "$HOST:$REMOTE/experiments/"  experiments/
 
