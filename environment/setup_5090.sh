@@ -15,6 +15,13 @@ ENV_NAME=${ENV_NAME:-camera310}
 
 echo "===== [0/7] 前置检查 ====="
 nvidia-smi || { echo "[致命] nvidia-smi 不可用"; exit 1; }
+# tmux（长任务防断线）；容器重启后系统包会丢，这里自动补装
+if ! command -v tmux >/dev/null 2>&1; then
+  apt-get update -qq && apt-get install -y -qq tmux 2>/dev/null \
+    || yum install -y tmux 2>/dev/null \
+    || echo "[提示] tmux 自动安装失败，长任务可用 nohup <cmd> > log 2>&1 & 替代"
+fi
+command -v tmux >/dev/null 2>&1 && echo "[确认] tmux 就绪"
 
 if [[ "${USE_CN_MIRROR:-0}" == "1" ]]; then
   export PIP_INDEX_URL="https://mirrors.aliyun.com/pypi/simple/"

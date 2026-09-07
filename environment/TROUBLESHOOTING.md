@@ -174,3 +174,13 @@ pyiqa 检测到本地文件即跳过下载。幂等 + wget -c 断点续传。
 处置：`scripts/run_eval.sh` / `run_enhance.sh` 顶部统一
 `export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"`——
 用户显式设置时尊重原值，未设置时默认走镜像。
+
+## 19. 容器重启后 tmux/系统工具消失
+
+现象：`tmux: command not found`（或 git/curl 等系统命令行为异常）。
+原因：平台重启=全新系统环境，**`/data` 数据盘内容保留，系统盘不保留**——
+conda 环境（在 /data）与数据都在，apt 装的系统包全丢。
+处置：`bash environment/setup_5090.sh`（第 0 步自动补装 tmux），
+或手动 `apt-get update && apt-get install -y tmux`。
+另：`/root/.cache`（pyiqa/timm/HF 缓存）在系统盘，重启后按 #16/#18 重下即可，
+评测/冒烟脚本会在缺权重的第一步明确报错，跑一遍下载脚本即恢复。
