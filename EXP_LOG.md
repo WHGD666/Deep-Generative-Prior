@@ -9,10 +9,19 @@
 |---|---|---|---|---|---|---|---|
 | 20260907_val_probe | 2026-09-07 | diagnostic | DiffBIR v2.1 同分辨率管线首图探路（仅 val case1，512 瓦片/50 步/fp16/upscale=1） | 无（首个 run） | PSNR 29.04 · SSIM 0.741 · LPIPS 0.592 · DISTS 0.314 · MUSIQ 25.7 · NIQE 4.01 · 综合(equal) 0.570 | 端到端跑通（402.6s/张，4K 输出尺寸一致）；分数待 LQ 不增强基线对照后才有意义 | dc719e0 |
 | lq_baseline | 2026-09-07 | control | LQ 不增强对照组：val 5 张原始输入直接评测 | 无（控制组，量管线增益用） | PSNR 28.03 · SSIM 0.788 · MS-SSIM 0.805 · LPIPS 0.357 · DISTS 0.279 · MUSIQ 21.3 · CLIPIQA 0.333 · NIQE 9.53 · MANIQA 0.268 · 综合 0.538/0.631/0.440 | NR 侧空间巨大（NIQE 9.5 极差）；FR 侧因 lq-gt 像素对齐天然偏高——扩散增强预计"NR 大赚、FR 有让"，靠 λ/低频回填找平衡 | 91f920f |
+| 20260907_diffbir_val | 2026-09-07 | competition | DiffBIR v2.1 同分辨率 val 5 张正式基线（512 瓦片/64 overlap/50 步/fp16/upscale=1） | 相对 lq_baseline：去噪 + DiffBIR + 色彩对齐 + 低频回填 + λ=0.7 | PSNR 24.9021 · SSIM 0.6414 · MS-SSIM 0.6854 · LPIPS 0.6367 · DISTS 0.2999 · MUSIQ 39.9418 · CLIPIQA 0.5742 · NIQE 4.6868 · MANIQA 0.3413 · 综合 0.5427/0.5529/0.5115 | NR 显著改善，FR 明显下降；equal/NR-heavy 高于控制组，但 FR-heavy 低于控制组，未通过完整调优闸门；下一步优先降低 λ 或增强低频保真，再做同口径复评 | 307be4d |
 
 <!-- 示例行（复制使用）：
 | 20260908_diffbir_baseline_a3f2 | 2026-09-08 | diagnostic | DiffBIR 原生管线 baseline | 无（首测） | PSNR:xx SSIM:xx LPIPS:xx MUSIQ:xx | 建立基准 | abc1234 |
 -->
+
+## 当前闸门状态
+
+- 当前阶段：阶段 4「controlled model improvement」，尚未进入 test-100 或官方提交阶段。
+- 本轮 `20260907_diffbir_val` 与 `lq_baseline` 使用相同的 val 5 对、相同指标实现和相同本地启发式综合分，具备可比性。
+- 相对控制组：equal 综合分 `0.5382 → 0.5427`，NR-heavy `0.4397 → 0.5115`；但 FR-heavy `0.6306 → 0.5529`，说明当前生成强度过高。
+- 决策：下一轮只改变 `lambda`，从 `0.7` 降至 `0.5`；配置快照为 `configs/experiments/20260908_val_lam05.yaml`，run_id 使用 `20260908_val_lam05`。
+- 闸门：只有候选配置在 equal 与 FR-heavy 方向均不劣于当前历史最优，且没有内容一致性/分辨率问题，才允许渲染 test-100。
 
 ## 指标口径说明（比较前必读）
 

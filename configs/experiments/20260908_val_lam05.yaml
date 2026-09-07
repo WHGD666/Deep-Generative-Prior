@@ -1,0 +1,26 @@
+# 20260908_val_lam05：仅改变 lambda，其余后处理参数与 20260907_diffbir_val 保持一致。
+# 该文件是本轮正式实验的不可变配置快照；后续调参必须复制为新的 run_id 文件。
+
+color_align:
+  enabled: true
+  mode: mean_std
+  strength: 1.0
+
+lowfreq_backfill:
+  enabled: true
+  sigma: 16.0
+  strength: 1.0
+
+lambda_blend:
+  enabled: true
+  lambda: 0.5
+  fidelity_source: preprocessed
+
+face_branch:
+  enabled: false
+  model_path: weights/gfpgan/GFPGANv1.4.pth
+  upscale: 1
+
+consistency_check:
+  max_color_drift: 0.06
+  min_corr: 0.80
